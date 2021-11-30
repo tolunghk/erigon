@@ -33,7 +33,7 @@ func APIList(ctx context.Context, db kv.RoDB,
 	traceImpl := NewTraceAPI(base, db, &cfg)
 	web3Impl := NewWeb3APIImpl(eth)
 	dbImpl := NewDBAPIImpl() /* deprecated */
-	engineImpl := NewEngineAPI(base, db, eth)
+	engineImpl := NewEngineAPI(base, db)
 
 	for _, enabledAPI := range cfg.API {
 		switch enabledAPI {
