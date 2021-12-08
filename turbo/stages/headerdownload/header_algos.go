@@ -588,7 +588,12 @@ func (hd *HeaderDownload) RequestMoreHeaders(currentTime uint64) (*HeaderRequest
 		return nil, penalties
 	}
 	for hd.anchorQueue.Len() > 0 {
-		anchor := (*hd.anchorQueue)[0]
+		var anchor *Anchor
+		if hd.backwards {
+			anchor = (*hd.anchorQueue)[len(*hd.anchorQueue)-1]
+		} else {
+			anchor = (*hd.anchorQueue)[0]
+		}
 		if _, ok := hd.anchors[anchor.parentHash]; ok {
 			if anchor.timestamp > currentTime {
 				// Anchor not ready for re-request yet
@@ -625,8 +630,13 @@ func (hd *HeaderDownload) RequestSkeleton() *HeaderRequest {
 	defer hd.lock.RUnlock()
 	log.Trace("Request skeleton", "anchors", len(hd.anchors), "top seen height", hd.topSeenHeight, "highestInDb", hd.highestInDb)
 	stride := uint64(8 * 192)
-	nextHeight := hd.highestInDb + stride
+	var nextHeight uint64
 	maxHeight := hd.topSeenHeight + 1 // Inclusive upper bound
+	if hd.backwards {
+		nextHeight = hd.highestInDb - stride
+	} else {
+		nextHeight = hd.highestInDb + stride
+	}
 	if maxHeight <= nextHeight {
 		return nil
 	}
@@ -664,7 +674,7 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 		}
 		hd.insertList = hd.insertList[:len(hd.insertList)-1]
 		skip := false
-		if !link.preverified {
+		if !link.preverified && !hd.backwards {
 			if _, bad := hd.badHeaders[link.hash]; bad {
 				skip = true
 			} else if err := hd.engine.VerifyHeader(hd.headerReader, link.header, true /* seal */); err != nil {
@@ -683,6 +693,10 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 				}
 			}
 		}
+
+		if hd.backwards {
+			hd.highestInDb = link.blockHeight
+		}
 		if _, ok := hd.links[link.hash]; ok {
 			heap.Remove(hd.linkQueue, link.idx)
 		}
@@ -696,7 +710,7 @@ func (hd *HeaderDownload) InsertHeaders(hf func(header *types.Header, hash commo
 			return false, err
 		}
 		// Check if transition to proof-of-stake happened and stop forward syncing
-		if isTrans {
+		if isTrans && !hd.backwards {
 			hd.highestInDb = link.blockHeight
 			return true, nil
 		}
@@ -927,7 +941,7 @@ func (hd *HeaderDownload) ProcessSegment(segment ChainSegment, newBlock bool, pe
 	lowestNum := segment[0].Number
 	highest := segment[len(segment)-1]
 	highestNum := highest.Number
-	log.Trace("processSegment", "from", lowestNum, "to", highestNum)
+	log.Info("processSegment", "from", lowestNum, "to", highestNum)
 	hd.lock.Lock()
 	defer hd.lock.Unlock()
 	foundAnchor, start := hd.findAnchors(segment)
@@ -955,6 +969,7 @@ func (hd *HeaderDownload) ProcessSegment(segment ChainSegment, newBlock bool, pe
 	// There are 4 cases
 	if foundAnchor {
 		if foundTip {
+			fmt.Println("1")
 			// Connect
 			var err error
 			if penalties, err = hd.connect(subSegment); err != nil {
@@ -963,6 +978,7 @@ func (hd *HeaderDownload) ProcessSegment(segment ChainSegment, newBlock bool, pe
 			}
 			log.Trace("Connected", "start", startNum, "end", endNum)
 		} else {
+			fmt.Println("2")
 			// ExtendDown
 			var err error
 			if requestMore, err = hd.extendDown(subSegment); err != nil {
@@ -972,6 +988,7 @@ func (hd *HeaderDownload) ProcessSegment(segment ChainSegment, newBlock bool, pe
 			log.Trace("Extended Down", "start", startNum, "end", endNum)
 		}
 	} else if foundTip {
+		fmt.Println("3")
 		// ExtendUp
 		if err := hd.extendUp(subSegment); err != nil {
 			log.Debug("ExtendUp failed", "error", err)
@@ -979,6 +996,7 @@ func (hd *HeaderDownload) ProcessSegment(segment ChainSegment, newBlock bool, pe
 		}
 		log.Trace("Extended Up", "start", startNum, "end", endNum)
 	} else {
+		fmt.Println("4")
 		// NewAnchor
 		var err error
 		if requestMore, err = hd.newAnchor(subSegment, peerID); err != nil {
@@ -1023,6 +1041,18 @@ func (hd *HeaderDownload) SetFetching(fetching bool) {
 	hd.lock.Lock()
 	defer hd.lock.Unlock()
 	hd.fetching = fetching
+}
+
+func (hd *HeaderDownload) SetBackwards(backwards bool) {
+	hd.lock.Lock()
+	defer hd.lock.Unlock()
+	hd.backwards = backwards
+}
+
+func (hd *HeaderDownload) SetHighest(highest uint64) {
+	hd.lock.Lock()
+	defer hd.lock.Unlock()
+	hd.highestInDb = highest
 }
 
 func (hd *HeaderDownload) RequestChaining() bool {

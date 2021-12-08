@@ -110,7 +110,7 @@ func SpawnStageHeaders(
 	}
 
 	if isTrans {
-		return HeadersDownward(s, u, ctx, tx, cfg, initialCycle, test)
+		return HeadersDownward(s, u, ctx, tx, cfg, initialCycle, test, useExternalTx)
 	} else {
 		return HeadersForward(s, u, ctx, tx, cfg, initialCycle, test, useExternalTx)
 	}
@@ -125,6 +125,7 @@ func HeadersDownward(
 	cfg HeadersCfg,
 	initialCycle bool,
 	test bool, // Set to true in tests, allows the stage to fail rather than wait indefinitely
+	useExternalTx bool,
 ) error {
 	*cfg.waitingPosHeaders = true
 	// Waiting for the beacon chain
@@ -165,6 +166,126 @@ func HeadersDownward(
 		return s.Update(tx, header.Number.Uint64())
 	}
 	// Downward sync if we need to process more (TODO)
+	if !useExternalTx {
+		defer tx.Rollback()
+	}
+	cfg.hd.SetHighest(header.Number.Uint64())
+	cfg.hd.SetFetching(true)
+	cfg.hd.SetBackwards(true)
+	defer cfg.hd.SetFetching(false)
+	headerProgress := cfg.hd.Progress()
+	logPrefix := s.LogPrefix()
+	// Check if this is called straight after the unwinds, which means we need to create new canonical markings
+	hash, err := rawdb.ReadCanonicalHash(tx, headerProgress)
+	if err != nil {
+		return err
+	}
+	logEvery := time.NewTicker(logInterval)
+	defer logEvery.Stop()
+	if hash == (common.Hash{}) {
+		headHash := rawdb.ReadHeadHeaderHash(tx)
+		if err = fixCanonicalChain(logPrefix, logEvery, headerProgress, headHash, tx, cfg.blockReader); err != nil {
+			return err
+		}
+		if !useExternalTx {
+			if err = tx.Commit(); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	// Allow other stages to run 1 cycle if no network available
+	if initialCycle && cfg.noP2PDiscovery {
+		return nil
+	}
+
+	log.Info(fmt.Sprintf("[%s] Waiting for headers...", logPrefix), "from", headerProgress)
+
+	localTd, err := rawdb.ReadTd(tx, hash, headerProgress)
+	if err != nil {
+		return err
+	}
+	headerInserter := headerdownload.NewHeaderInserter(logPrefix, localTd, headerProgress)
+	cfg.hd.SetHeaderReader(&chainReader{config: &cfg.chainConfig, tx: tx, blockReader: cfg.blockReader})
+
+	var sentToPeer bool
+	stopped := false
+	prevProgress := headerProgress
+Loop:
+	for !stopped {
+		currentTime := uint64(time.Now().Unix())
+		req, penalties := cfg.hd.RequestMoreHeaders(currentTime)
+		if req != nil {
+			_, sentToPeer = cfg.headerReqSend(ctx, req)
+			if sentToPeer {
+				cfg.hd.SentRequest(req, currentTime, 5 /* timeout */)
+				log.Info("Sent request", "height", req.Number)
+			}
+		}
+		cfg.penalize(ctx, penalties)
+		maxRequests := 64 // Limit number of requests sent per round to let some headers to be inserted into the database
+		for req != nil && sentToPeer && maxRequests > 0 {
+			req, penalties = cfg.hd.RequestMoreHeaders(currentTime)
+			if req != nil {
+				_, sentToPeer = cfg.headerReqSend(ctx, req)
+				if sentToPeer {
+					cfg.hd.SentRequest(req, currentTime, 5 /*timeout */)
+					log.Info("Sent request", "height", req.Number)
+				}
+			}
+			cfg.penalize(ctx, penalties)
+			maxRequests--
+		}
+
+		// Send skeleton request if required
+		req = cfg.hd.RequestSkeleton()
+		if req != nil {
+			_, sentToPeer = cfg.headerReqSend(ctx, req)
+			if sentToPeer {
+				log.Info("Sent skeleton request", "height", req.Number)
+			}
+		}
+		// Load headers into the database
+		var inSync bool
+		if inSync, err = cfg.hd.InsertHeaders(headerInserter.FeedHeaderFunc(tx, cfg.blockReader), cfg.chainConfig.TerminalTotalDifficulty, logPrefix, logEvery.C); err != nil {
+			return err
+		}
+
+		announces := cfg.hd.GrabAnnounces()
+		if len(announces) > 0 {
+			cfg.announceNewHashes(ctx, announces)
+		}
+		if headerInserter.BestHeaderChanged() { // We do not break unless there best header changed
+			if !initialCycle {
+				// if this is not an initial cycle, we need to react quickly when new headers are coming in
+				break
+			}
+			// if this is initial cycle, we want to make sure we insert all known headers (inSync)
+			if inSync {
+				break
+			}
+		}
+		if test {
+			break
+		}
+		timer := time.NewTimer(1 * time.Second)
+		select {
+		case <-ctx.Done():
+			stopped = true
+		case <-logEvery.C:
+			progress := cfg.hd.Progress()
+			logProgressHeaders(logPrefix, prevProgress, progress)
+			prevProgress = progress
+		case <-timer.C:
+			log.Trace("RequestQueueTime (header) ticked")
+		case <-cfg.hd.DeliveryNotify:
+			log.Trace("headerLoop woken up by the incoming request")
+		case <-cfg.hd.SkipCycleHack:
+			break Loop
+		}
+		timer.Stop()
+	}
 	return s.Update(tx, header.Number.Uint64())
 }
 
@@ -306,6 +427,7 @@ func HeadersForward(
 		return err
 	}
 	cfg.hd.SetFetching(true)
+	cfg.hd.SetBackwards(false)
 	defer cfg.hd.SetFetching(false)
 	headerProgress = cfg.hd.Progress()
 	logPrefix := s.LogPrefix()
@@ -394,9 +516,9 @@ Loop:
 		}
 		// Load headers into the database
 		var inSync bool
-		if inSync, err = cfg.hd.InsertHeaders(headerInserter.FeedHeaderFunc(tx, cfg.blockReader), cfg.chainConfig.TerminalTotalDifficulty, logPrefix, logEvery.C); err != nil {
+		/*if inSync, err = cfg.hd.InsertHeaders(headerInserter.FeedHeaderFunc(tx, cfg.blockReader), cfg.chainConfig.TerminalTotalDifficulty, logPrefix, logEvery.C); err != nil {
 			return err
-		}
+		}*/
 
 		announces := cfg.hd.GrabAnnounces()
 		if len(announces) > 0 {
