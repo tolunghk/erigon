@@ -295,6 +295,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.KovanChainConfig
 	case ghash == params.FermionGenesisHash:
 		return params.FermionChainConfig
+	case ghash == params.MergeDevnetGenesisHash:
+		return params.MergeDevnetChainConfig
 	default:
 		return params.AllEthashProtocolChanges
 	}
@@ -554,6 +556,16 @@ func DefaultGoerliGenesisBlock() *Genesis {
 		GasLimit:   10485760,
 		Difficulty: big.NewInt(1),
 		Alloc:      readPrealloc("allocs/goerli.json"),
+	}
+}
+
+func DefaultMergeDevnetBlock() *Genesis {
+	return &Genesis{
+		Config:     params.MergeDevnetChainConfig,
+		Timestamp:  0,
+		GasLimit:   0x400000,
+		Nonce:      0x1234,
+		Difficulty: big.NewInt(1),
 	}
 }
 

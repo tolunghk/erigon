@@ -615,6 +615,8 @@ func setBootstrapNodes(ctx *cli.Context, cfg *p2p.Config) {
 			urls = params.KovanBootnodes
 		case params.FermionChainName:
 			urls = params.FermionBootnodes
+		case "merge-devnet3":
+			urls = params.MergeDevnetBootnodes
 		default:
 			if cfg.BootstrapNodes != nil {
 				return // already set, don't apply defaults.
@@ -649,6 +651,8 @@ func setBootstrapNodesV5(ctx *cli.Context, cfg *p2p.Config) {
 			urls = params.KovanBootnodes
 		case params.FermionChainName:
 			urls = params.FermionBootnodes
+		case "merge-devnet3":
+			urls = params.MergeDevnetBootnodes
 		default:
 			if cfg.BootstrapNodesV5 != nil {
 				return // already set, don't apply defaults.
@@ -1288,6 +1292,9 @@ func SetEthConfig(ctx *cli.Context, nodeConfig *node.Config, cfg *ethconfig.Conf
 		}
 		cfg.Genesis = core.DefaultGoerliGenesisBlock()
 		SetDNSDiscoveryDefaults(cfg, params.GoerliGenesisHash)
+	case "merge-devnet3":
+		cfg.NetworkID = 1337602
+		cfg.Genesis = core.DefaultMergeDevnetBlock()
 	case params.ErigonMineName:
 		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
 			cfg.NetworkID = new(big.Int).SetBytes([]byte("erigon-mine")).Uint64() // erigon-mine
@@ -1386,6 +1393,8 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultKovanGenesisBlock()
 	case params.FermionChainName:
 		genesis = core.DefaultFermionGenesisBlock()
+	case "merge-devnet3":
+		genesis = core.DefaultMergeDevnetBlock()
 	case params.DevChainName:
 		Fatalf("Developer chains are ephemeral")
 	}
