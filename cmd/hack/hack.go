@@ -62,6 +62,7 @@ import (
 	"github.com/ledgerwatch/erigon/turbo/snapshotsync/snapshothashes"
 	"github.com/ledgerwatch/erigon/turbo/trie"
 	"github.com/ledgerwatch/log/v3"
+	"github.com/spenczar/tdigest"
 	"github.com/wcharczuk/go-chart/v2"
 	atomic2 "go.uber.org/atomic"
 )
@@ -1430,6 +1431,12 @@ func genstate() error {
 // it notifies the waitgroup before exiting, so that the caller known when all work is done
 // No error channels for now
 func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector, completion *sync.WaitGroup) {
+	var movingAvgScore uint64
+	var count int
+	var x1 int
+	prevDictKey := make([]byte, maxPatternLen)
+
+	td := tdigest.NewWithCompression(100)
 	for superstring := range superstringCh {
 		//log.Info("Superstring", "len", len(superstring))
 		sa := make([]int32, len(superstring))
@@ -1551,21 +1558,87 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 						lastK = k
 					}
 				}
-				score := uint64(repeats * int(l-4))
-				if score > minPatternScore {
-					dictKey := make([]byte, l)
-					for s := 0; s < l; s++ {
-						dictKey[s] = superstring[(filtered[i]+s)*2+1]
-					}
-					var dictVal [8]byte
-					binary.BigEndian.PutUint64(dictVal[:], score)
-					if err = dictCollector.Collect(dictKey, dictVal[:]); err != nil {
-						log.Error("processSuperstring", "collect", err)
-					}
+
+				if repeats < 10 {
+					continue
 				}
+
+				//score := uint64(repeats * int(l-4))
+				score := uint64(repeats * int(l))
+				if score < minPatternScore {
+					continue
+				}
+
+				// moving average, longer words producing more patterns and will
+				if l == 8 {
+					count++
+					td.Add(float64(score), 1)
+				}
+
+				/*
+					movingAvgScore = movingAvgScore + uint64((int(score)-int(movingAvgScore))/count)
+					if count > 10 && score < movingAvgScore*4 {
+						continue
+					}
+				*/
+				_ = movingAvgScore
+				// if count > 10 && l <= 32 && score < uint64(td.Quantile(0.5)) {
+				// 	continue
+				// }
+
+				// cut long tails
+				if count > 10 {
+					if l <= 32 && score < uint64(td.Quantile(0.2)) {
+						continue
+					}
+					if l > 32 && l <= 64 && score < uint64(td.Quantile(0.3)) {
+						continue
+					}
+					if l > 64 && score < uint64(td.Quantile(0.99)) {
+						_ = x1
+						continue
+						// if x1 > filtered[i]-l*16 && x1 < filtered[i]+l*16 { // skip nearest permutations
+						// 	//fmt.Printf("skip: %d, %d\n", x1, filtered[i]-l*16)
+						// 	continue
+						// }
+						// x1 = filtered[i]
+						//				continue
+					}
+					// if l > 256 && score < uint64(td.Quantile(0.9999)) {
+					// 	continue
+					// }
+				}
+
+				// fmt.Printf("moving: %.0f, %.0f, %.0f\n", td.Quantile(0.97), td.Quantile(0.99), td.Quantile(0.5))
+
+				// if score > minPatternScore {
+				dictKey := make([]byte, l)
+				for s := 0; s < l; s++ {
+					dictKey[s] = superstring[(filtered[i]+s)*2+1]
+				}
+				var dictVal [8]byte
+				if count > 100 && l == 66 && score < uint64(td.Quantile(0.99999)) {
+					if bytes.HasPrefix(prevDictKey[:len(prevDictKey)/2], dictKey[:len(dictKey)/2]) {
+						continue
+					}
+					//fmt.Printf("%x\n%x\n\n", prevDictKey, dictKey)
+					prevDictKey = common.CopyBytes(dictKey)
+				}
+
+				if count > 10 && score > 1000 {
+					//fmt.Printf("filtered[i]: %d, score=%d %x\n", filtered[i], score, dictKey)
+					//fmt.Printf("why: repeats=%d, score=%d, %.0f, %.0f, %.0f, %x\n", repeats, score, td.Quantile(0.999), td.Quantile(0.9999), td.Quantile(0.99999), dictKey)
+				}
+				binary.BigEndian.PutUint64(dictVal[:], score)
+				if err = dictCollector.Collect(dictKey, dictVal[:]); err != nil {
+					log.Error("processSuperstring", "collect", err)
+				}
+				// }
 			}
 		}
 	}
+	fmt.Printf("moving: %.0f,   %.0f,  %.0f, %.0f, %.0f, %.0f\n", td.Quantile(0.2), td.Quantile(0.3), td.Quantile(0.5), td.Quantile(0.95), td.Quantile(0.97), td.Quantile(0.99))
+
 	completion.Done()
 }
 
@@ -1578,10 +1651,10 @@ const superstringLimit = 16 * 1024 * 1024
 
 // minPatternLen is minimum length of pattern we consider to be included into the dictionary
 const minPatternLen = 5
-const maxPatternLen = 64
+const maxPatternLen = 70
 
 // minPatternScore is minimum score (per superstring) required to consider including pattern into the dictionary
-const minPatternScore = 1024
+const minPatternScore = 512
 
 func compress1(chaindata string, fileName, segmentFileName string) error {
 	database := mdbx.MustOpen(chaindata)
@@ -1593,7 +1666,7 @@ func compress1(chaindata string, fileName, segmentFileName string) error {
 	// We only consider values with length > 2, because smaller values are not compressible without going into bits
 	var superstring []byte
 
-	workers := runtime.NumCPU() / 2
+	workers := 1 //runtime.NumCPU() / 2
 	// Collector for dictionary words (sorted by their score)
 	tmpDir := ""
 	ch := make(chan []byte, workers)
