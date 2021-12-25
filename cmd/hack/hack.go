@@ -1433,10 +1433,16 @@ func genstate() error {
 func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector, completion *sync.WaitGroup) {
 	var movingAvgScore uint64
 	var count int
+	_ = count
 	var x1 int
 	prevDictKey := make([]byte, maxPatternLen)
+	_ = prevDictKey
+	td := make([]*tdigest.TDigest, maxPatternLen+1)
+	for i := range td {
+		td[i] = tdigest.NewWithCompression(100)
+	}
+	dictKey := make([]byte, maxPatternLen)
 
-	td := tdigest.NewWithCompression(100)
 	for superstring := range superstringCh {
 		//log.Info("Superstring", "len", len(superstring))
 		sa := make([]int32, len(superstring))
@@ -1559,9 +1565,9 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 					}
 				}
 
-				if repeats < 10 {
-					continue
-				}
+				// if repeats < 10 {
+				// 	continue
+				// }
 
 				//score := uint64(repeats * int(l-4))
 				score := uint64(repeats * int(l))
@@ -1570,10 +1576,7 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 				}
 
 				// moving average, longer words producing more patterns and will
-				if l == 8 {
-					count++
-					td.Add(float64(score), 1)
-				}
+				td[l].Add(float64(score), 1)
 
 				/*
 					movingAvgScore = movingAvgScore + uint64((int(score)-int(movingAvgScore))/count)
@@ -1581,51 +1584,49 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 						continue
 					}
 				*/
+				_ = x1
 				_ = movingAvgScore
 				// if count > 10 && l <= 32 && score < uint64(td.Quantile(0.5)) {
 				// 	continue
 				// }
-
 				// cut long tails
-				if count > 10 {
-					if l <= 32 && score < uint64(td.Quantile(0.2)) {
-						continue
-					}
-					if l > 32 && l <= 64 && score < uint64(td.Quantile(0.3)) {
-						continue
-					}
-					if l > 64 && score < uint64(td.Quantile(0.99)) {
-						_ = x1
-						continue
-						// if x1 > filtered[i]-l*16 && x1 < filtered[i]+l*16 { // skip nearest permutations
-						// 	//fmt.Printf("skip: %d, %d\n", x1, filtered[i]-l*16)
-						// 	continue
-						// }
-						// x1 = filtered[i]
-						//				continue
-					}
-					// if l > 256 && score < uint64(td.Quantile(0.9999)) {
-					// 	continue
-					// }
+				if l <= 16 && score < uint64(td[l].Quantile(0.5)) {
+					continue
 				}
+				if l > 16 && l <= 32 && score < uint64(td[l].Quantile(0.5)) {
+					continue
+				}
+				if l > 32 && l <= 64 && score < uint64(td[l].Quantile(0.95)) {
+					continue
+				}
+				if l > 64 && score < uint64(td[l].Quantile(0.95)) {
+					continue
+				}
+				// if l > 128 && repeats < int(td[l].Quantile(0.999)) {
+				// 	continue
+				// }
+				// if l > 256 && score < uint64(td.Quantile(0.9999)) {
+				// 	continue
+				// }
 
 				// fmt.Printf("moving: %.0f, %.0f, %.0f\n", td.Quantile(0.97), td.Quantile(0.99), td.Quantile(0.5))
 
 				// if score > minPatternScore {
-				dictKey := make([]byte, l)
+				//dictKey := make([]byte, l)
+				dictKey = dictKey[:l]
 				for s := 0; s < l; s++ {
 					dictKey[s] = superstring[(filtered[i]+s)*2+1]
 				}
 				var dictVal [8]byte
-				if count > 100 && l == 66 && score < uint64(td.Quantile(0.99999)) {
-					if bytes.HasPrefix(prevDictKey[:len(prevDictKey)/2], dictKey[:len(dictKey)/2]) {
-						continue
-					}
-					//fmt.Printf("%x\n%x\n\n", prevDictKey, dictKey)
-					prevDictKey = common.CopyBytes(dictKey)
-				}
+				// if count > 100 && l == 66 && score < uint64(td[l].Quantile(0.99999)) {
+				// 	if bytes.HasPrefix(prevDictKey[:len(prevDictKey)/2], dictKey[:len(dictKey)/2]) {
+				// 		continue
+				// 	}
+				// 	//fmt.Printf("%x\n%x\n\n", prevDictKey, dictKey)
+				// 	prevDictKey = common.CopyBytes(dictKey)
+				// }
 
-				if count > 10 && score > 1000 {
+				if l > 64 {
 					//fmt.Printf("filtered[i]: %d, score=%d %x\n", filtered[i], score, dictKey)
 					//fmt.Printf("why: repeats=%d, score=%d, %.0f, %.0f, %.0f, %x\n", repeats, score, td.Quantile(0.999), td.Quantile(0.9999), td.Quantile(0.99999), dictKey)
 				}
@@ -1637,7 +1638,9 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 			}
 		}
 	}
-	fmt.Printf("moving: %.0f,   %.0f,  %.0f, %.0f, %.0f, %.0f\n", td.Quantile(0.2), td.Quantile(0.3), td.Quantile(0.5), td.Quantile(0.95), td.Quantile(0.97), td.Quantile(0.99))
+	//fmt.Printf("moving256: %.0f,   %.0f,  %.0f, %.0f, %.0f, %.0f\n", td[256].Quantile(0.2), td[256].Quantile(0.3), td[256].Quantile(0.5), td[256].Quantile(0.95), td[256].Quantile(0.97), td[256].Quantile(0.99))
+	//fmt.Printf("moving64: %.0f,   %.0f,  %.0f, %.0f, %.0f, %.0f\n", td[64].Quantile(0.2), td[64].Quantile(0.3), td[64].Quantile(0.5), td[64].Quantile(0.95), td[64].Quantile(0.97), td[64].Quantile(0.99))
+	//fmt.Printf("moving5: %.0f,   %.0f,  %.0f, %.0f, %.0f, %.0f\n", td[5].Quantile(0.2), td[5].Quantile(0.3), td[5].Quantile(0.5), td[5].Quantile(0.95), td[5].Quantile(0.97), td[5].Quantile(0.99))
 
 	completion.Done()
 }
@@ -1651,10 +1654,10 @@ const superstringLimit = 16 * 1024 * 1024
 
 // minPatternLen is minimum length of pattern we consider to be included into the dictionary
 const minPatternLen = 5
-const maxPatternLen = 70
+const maxPatternLen = 4096
 
 // minPatternScore is minimum score (per superstring) required to consider including pattern into the dictionary
-const minPatternScore = 512
+const minPatternScore = 256
 
 func compress1(chaindata string, fileName, segmentFileName string) error {
 	database := mdbx.MustOpen(chaindata)
@@ -1666,7 +1669,7 @@ func compress1(chaindata string, fileName, segmentFileName string) error {
 	// We only consider values with length > 2, because smaller values are not compressible without going into bits
 	var superstring []byte
 
-	workers := 1 //runtime.NumCPU() / 2
+	workers := runtime.NumCPU() - 2
 	// Collector for dictionary words (sorted by their score)
 	tmpDir := ""
 	ch := make(chan []byte, workers)
@@ -2214,6 +2217,10 @@ func reducedict(name string, segmentFileName string) error {
 	// DictionaryBuilder is for sorting words by their freuency (to assign codes)
 	var pt patricia.PatriciaTree
 	code2pattern := make([]*Pattern, 0, 256)
+	lengths := map[int]int{}
+	for i := 0; i < maxPatternLen; i++ {
+		lengths[i] = 0
+	}
 	if err := compress.ReadDictrionary(name+".dictionary.txt", func(score uint64, word []byte) error {
 		p := &Pattern{
 			score:    score,
@@ -2224,16 +2231,18 @@ func reducedict(name string, segmentFileName string) error {
 		}
 		pt.Insert(word, p)
 		code2pattern = append(code2pattern, p)
+		lengths[len(word)]++
 		return nil
 	}); err != nil {
 		return err
 	}
 	log.Info("dictionary file parsed", "entries", len(code2pattern))
+	fmt.Printf("distribution: %+v\n", lengths)
 	tmpDir := ""
 	ch := make(chan []byte, 10000)
 	inputSize, outputSize := atomic2.NewUint64(0), atomic2.NewUint64(0)
 	var wg sync.WaitGroup
-	workers := runtime.NumCPU() / 2
+	workers := runtime.NumCPU() - 2
 	var collectors []*etl.Collector
 	var posMaps []map[uint64]uint64
 	for i := 0; i < workers; i++ {
@@ -2291,14 +2300,20 @@ func reducedict(name string, segmentFileName string) error {
 	// Calculate offsets of the dictionary patterns and total size
 	var offset uint64
 	numBuf := make([]byte, binary.MaxVarintLen64)
+	lengths = map[int]int{}
+	for i := 0; i < maxPatternLen; i++ {
+		lengths[i] = 0
+	}
 	for _, p := range patternList {
 		p.offset = offset
 		n := binary.PutUvarint(numBuf, uint64(len(p.w)))
 		offset += uint64(n + len(p.w))
+		lengths[len(p.w)]++
 	}
 	patternCutoff := offset // All offsets below this will be considered patterns
 	i := 0
 	log.Info("Effective dictionary", "size", patternList.Len())
+	fmt.Printf("distribution2: %+v\n", lengths)
 	// Build Huffman tree for codes
 	var codeHeap PatternHeap
 	heap.Init(&codeHeap)
@@ -2713,11 +2728,25 @@ func recsplitWholeChain(chaindata string) error {
 		if err := compress1(chaindata, fileName, segmentFile); err != nil {
 			panic(err)
 		}
+		d, err := compress.NewDecompressor(segmentFile)
+		if err != nil {
+			panic(err)
+		}
+		buf := make([]byte, 128_000)
+		for {
+			g := d.MakeGetter()
+			t := time.Now()
+
+			for g.HasNext() {
+				buf, _ = g.Next(buf[:0])
+			}
+			fmt.Printf("took: %s\n", time.Since(t))
+		}
 		_ = firstTxID
 		//if err := snapshotsync.TransactionsHashIdx(*chainID, firstTxID, segmentFile); err != nil {
 		//	panic(err)
 		//}
-		_ = os.Remove(fileName + ".dat")
+		//_ = os.Remove(fileName + ".dat")
 
 		//nolint
 		//break // TODO: remove me - useful for tests
