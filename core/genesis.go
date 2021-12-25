@@ -307,6 +307,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 		return params.KovanChainConfig
 	case ghash == params.FermionGenesisHash:
 		return params.FermionChainConfig
+	case ghash == params.KintsugiGenesisHash:
+		return params.KintsugiChainConfig
 	default:
 		return params.AllEthashProtocolChanges
 	}
@@ -662,6 +664,19 @@ func DefaultFermionGenesisBlock() *Genesis {
 		GasLimit:   0x5B8D80,
 		Difficulty: big.NewInt(0x20000),
 		Alloc:      readPrealloc("allocs/fermion.json"),
+	}
+}
+
+func DefaultKintsugiGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:     params.KintsugiChainConfig,
+		Nonce:      4660,
+		Timestamp:  0x0,
+		ExtraData:  hexutil.MustDecode("0x"),
+		GasLimit:   0x400000,
+		Difficulty: big.NewInt(0x1),
+		Mixhash:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		Alloc:      readPrealloc("allocs/kintsugi.json"),
 	}
 }
 

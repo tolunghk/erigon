@@ -1022,6 +1022,9 @@ func byChain() (*core.Genesis, *params.ChainConfig) {
 	case networkname.BSCMainnetChainName:
 		chainConfig = params.BSCMainnetChainConfig
 		genesis = core.DefaultBSCMainnetGenesisBlock()
+	case networkname.KintsugiChainName:
+		chainConfig = params.KintsugiChainConfig
+		genesis = core.DefaultKintsugiGenesisBlock()
 	}
 	return genesis, chainConfig
 }

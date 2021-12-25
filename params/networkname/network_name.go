@@ -11,4 +11,5 @@ const (
 	KovanChainName      = "kovan"
 	BSCMainnetChainName = "bsc-mainnet"
 	FermionChainName    = "fermion"
+	KintsugiChainName   = "kintsugi"
 )
