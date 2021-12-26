@@ -83,6 +83,7 @@ func TruncateRange(db kv.RwTx, bucket string, key []byte, to uint32) error {
 	binary.BigEndian.PutUint32(chunkKey[len(chunkKey)-4:], to)
 	bm, err := Get(db, bucket, key, to, math.MaxUint32)
 	if err != nil {
+		panic(err)
 		return err
 	}
 
@@ -92,25 +93,29 @@ func TruncateRange(db kv.RwTx, bucket string, key []byte, to uint32) error {
 
 	c, err := db.Cursor(bucket)
 	if err != nil {
+		panic(err)
 		return err
 	}
 	defer c.Close()
-	if err := ethdb.Walk(c, chunkKey, 0, func(k, v []byte) (bool, error) {
+	for k, _, err := c.Seek(chunkKey); k != nil; k, _, err = c.Next() {
+		if err != nil {
+			panic(err)
+			return err
+		}
 		if !bytes.HasPrefix(k, key) {
-			return false, nil
+			break
 		}
 		if err := db.Delete(bucket, k, nil); err != nil {
-			return false, err
+			panic(err)
+			return err
 		}
-		return true, nil
-	}); err != nil {
-		return err
 	}
 
 	buf := bytes.NewBuffer(nil)
 	return WalkChunkWithKeys(key, bm, ChunkLimit, func(chunkKey []byte, chunk *roaring.Bitmap) error {
 		buf.Reset()
 		if _, err := chunk.WriteTo(buf); err != nil {
+			panic(err)
 			return err
 		}
 		return db.Put(bucket, chunkKey, libcommon.Copy(buf.Bytes()))
