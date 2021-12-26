@@ -1590,13 +1590,13 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 				// 	continue
 				// }
 				// cut long tails
-				if l <= 16 && score < uint64(td[l].Quantile(0.5)) {
+				if l <= 16 && score < uint64(td[l].Quantile(0.2)) {
 					continue
 				}
-				if l > 16 && l <= 32 && score < uint64(td[l].Quantile(0.5)) {
+				if l > 16 && l <= 32 && score < uint64(td[l].Quantile(0.2)) {
 					continue
 				}
-				if l > 32 && l <= 64 && score < uint64(td[l].Quantile(0.95)) {
+				if l > 32 && l <= 64 && score < uint64(td[l].Quantile(0.5)) {
 					continue
 				}
 				if l > 64 && score < uint64(td[l].Quantile(0.95)) {
@@ -1654,7 +1654,7 @@ const superstringLimit = 16 * 1024 * 1024
 
 // minPatternLen is minimum length of pattern we consider to be included into the dictionary
 const minPatternLen = 5
-const maxPatternLen = 4096
+const maxPatternLen = 64
 
 // minPatternScore is minimum score (per superstring) required to consider including pattern into the dictionary
 const minPatternScore = 256
