@@ -791,7 +791,7 @@ func (c *AccTrieCursor) _seek(seek []byte, withinPrefix []byte) (bool, error) {
 	var k, v []byte
 	var err error
 	if len(seek) == 0 {
-		k, v, err = c.c.First()
+		k, v, err = c.c.Seek(seek)
 	} else {
 		//TODO: write more common optimization - maintain .canUseNext variable by hasTree info - similar to skipState
 		// optimistic .Next call, can use result in 2 cases:
