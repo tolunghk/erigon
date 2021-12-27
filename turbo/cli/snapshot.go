@@ -54,25 +54,28 @@ var (
 	}
 )
 
-func doSnapshotCommand(ctx *cli.Context) error {
-	fromBlock := ctx.Uint64(SnapshotFromFlag.Name)
-	segmentSize := ctx.Uint64(SnapshotSegmentSizeFlag.Name)
+func doSnapshotCommand(cliCtx *cli.Context) error {
+	fromBlock := cliCtx.Uint64(SnapshotFromFlag.Name)
+	segmentSize := cliCtx.Uint64(SnapshotSegmentSizeFlag.Name)
 	if segmentSize < 1000 {
 		return fmt.Errorf("too small --segment.size %d", segmentSize)
 	}
-	dataDir := ctx.String(utils.DataDirFlag.Name)
+	dataDir := cliCtx.String(utils.DataDirFlag.Name)
 	snapshotDir := path.Join(dataDir, "snapshots")
 
 	chainDB := mdbx.MustOpen(path.Join(dataDir, "chaindata"))
 	defer chainDB.Close()
 
-	if err := snapshotBlocks(chainDB, fromBlock, segmentSize, snapshotDir); err != nil {
+	ctx, cancel := utils.RootContext()
+	defer cancel()
+
+	if err := snapshotBlocks(ctx, chainDB, fromBlock, segmentSize, snapshotDir); err != nil {
 		log.Error("Error", "err", err)
 	}
 	return nil
 }
 
-func snapshotBlocks(chainDB kv.RoDB, fromBlock, blocksPerFile uint64, snapshotDir string) error {
+func snapshotBlocks(ctx context.Context, chainDB kv.RoDB, fromBlock, blocksPerFile uint64, snapshotDir string) error {
 	lastChunk := func(tx kv.Tx, blocksPerFile uint64) (uint64, error) {
 		c, err := tx.Cursor(kv.BlockBody)
 		if err != nil {
@@ -98,7 +101,7 @@ func snapshotBlocks(chainDB kv.RoDB, fromBlock, blocksPerFile uint64, snapshotDi
 	chainConfig := tool.ChainConfigFromDB(chainDB)
 	chainID, _ := uint256.FromBig(chainConfig.ChainID)
 	_ = chainID
-	if err := chainDB.View(context.Background(), func(tx kv.Tx) (err error) {
+	if err := chainDB.View(ctx, func(tx kv.Tx) (err error) {
 		last, err = lastChunk(tx, blocksPerFile)
 		return err
 	}); err != nil {
