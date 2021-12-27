@@ -676,6 +676,7 @@ func DefaultKintsugiGenesisBlock() *Genesis {
 		GasLimit:   0x400000,
 		Difficulty: big.NewInt(0x1),
 		Mixhash:    common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
+		Coinbase:   common.HexToAddress("0x0000000000000000000000000000000000000000"),
 		Alloc:      readPrealloc("allocs/kintsugi.json"),
 	}
 }
