@@ -1586,20 +1586,14 @@ func processSuperstring(superstringCh chan []byte, dictCollector *etl.Collector,
 				*/
 				_ = x1
 				_ = movingAvgScore
-				// if count > 10 && l <= 32 && score < uint64(td.Quantile(0.5)) {
-				// 	continue
-				// }
 				// cut long tails
-				if l <= 16 && score < uint64(td[l].Quantile(0.2)) {
-					continue
-				}
-				if l > 16 && l <= 32 && score < uint64(td[l].Quantile(0.2)) {
+				if l <= 32 && score < uint64(td[l].Quantile(0.2)) {
 					continue
 				}
 				if l > 32 && l <= 64 && score < uint64(td[l].Quantile(0.5)) {
 					continue
 				}
-				if l > 64 && score < uint64(td[l].Quantile(0.95)) {
+				if l > 64 && score < uint64(td[l].Quantile(0.99)) {
 					continue
 				}
 				// if l > 128 && repeats < int(td[l].Quantile(0.999)) {
