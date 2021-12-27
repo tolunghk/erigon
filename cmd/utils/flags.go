@@ -1361,6 +1361,12 @@ func SetEthConfig(ctx *cli.Context, nodeConfig *node.Config, cfg *ethconfig.Conf
 		if !ctx.GlobalIsSet(MinerGasPriceFlag.Name) {
 			cfg.Miner.GasPrice = big.NewInt(1)
 		}
+	case networkname.KintsugiChainName:
+		if !ctx.GlobalIsSet(NetworkIdFlag.Name) {
+			cfg.NetworkID = 1337702
+		}
+		cfg.Genesis = core.DefaultKintsugiGenesisBlock()
+		SetDNSDiscoveryDefaults(cfg, params.KintsugiGenesisHash)
 	default:
 		Fatalf("ChainDB name is not recognized: %s", chain)
 	}
@@ -1424,6 +1430,8 @@ func MakeGenesis(ctx *cli.Context) *core.Genesis {
 		genesis = core.DefaultFermionGenesisBlock()
 	case networkname.BSCMainnetChainName:
 		genesis = core.DefaultBSCMainnetGenesisBlock()
+	case networkname.KintsugiChainName:
+		genesis = core.DefaultKintsugiGenesisBlock()
 	case networkname.DevChainName:
 		Fatalf("Developer chains are ephemeral")
 	}

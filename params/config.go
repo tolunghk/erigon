@@ -364,6 +364,7 @@ var (
 	}
 
 	KintsugiChainConfig = &ChainConfig{
+		ChainName:               networkname.KintsugiChainName,
 		ChainID:                 big.NewInt(1337702),
 		Consensus:               CliqueConsensus,
 		HomesteadBlock:          big.NewInt(0),
