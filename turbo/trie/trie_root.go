@@ -791,7 +791,7 @@ func (c *AccTrieCursor) _seek(seek []byte, withinPrefix []byte) (bool, error) {
 	var k, v []byte
 	var err error
 	if len(seek) == 0 {
-		k, v, err = c.c.Current()
+		k, v, err = c.c.Seek(seek)
 		if err != nil {
 			panic(err)
 		}
