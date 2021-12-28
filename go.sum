@@ -619,8 +619,6 @@ github.com/kylelemons/godebug v0.0.0-20170224010052-a616ab194758 h1:0D5M2HQSGD3P
 github.com/kylelemons/godebug v0.0.0-20170224010052-a616ab194758/go.mod h1:B69LEHPfb2qLo0BaaOLcbitczOKLWTsrBG9LczfCD4k=
 github.com/leanovate/gopter v0.2.9 h1:fQjYxZaynp97ozCzfOyOuAGOU4aU/z37zf/tOujFk7c=
 github.com/leanovate/gopter v0.2.9/go.mod h1:U2L/78B+KVFIx2VmW6onHJQzXtFb+p5y3y2Sh+Jxxv8=
-github.com/ledgerwatch/erigon-lib v0.0.0-20211228022123-d304ba49eb4d h1:f3G1mI047pT1jl34asY3B/674OR3siT10RzeqI+ifXs=
-github.com/ledgerwatch/erigon-lib v0.0.0-20211228022123-d304ba49eb4d/go.mod h1:hFYDX+635234Il1mdK/7b/eLZwqZEwCgmryeSV776kg=
 github.com/ledgerwatch/erigon-lib v0.0.0-20211228022355-468e02902fbb h1:nSwItFK2p9dpbWTIozKbZoWxJ4405c6Mb6f5QsKE/m0=
 github.com/ledgerwatch/erigon-lib v0.0.0-20211228022355-468e02902fbb/go.mod h1:3hWn0Pdn+hEOH82RzdwWAGB0ZVCK5dPV9g1sZHys1hA=
 github.com/ledgerwatch/log/v3 v3.4.0 h1:SEIOcv5a2zkG3PmoT5jeTU9m/0nEUv0BJS5bzsjwKCI=
@@ -977,8 +975,7 @@ github.com/tklauser/go-sysconf v0.3.9/go.mod h1:11DU/5sG7UexIrp/O6g35hrWzu0JxlwQ
 github.com/tklauser/numcpus v0.3.0 h1:ILuRUQBtssgnxw0XXIjKUC56fgnOrFoQQ/4+DeU2biQ=
 github.com/tklauser/numcpus v0.3.0/go.mod h1:yFGUr7TUHQRAhyqBcEg0Ge34zDBAsIvJJcyE6boqnA8=
 github.com/tmc/grpc-websocket-proxy v0.0.0-20170815181823-89b8d40f7ca8/go.mod h1:ncp9v5uamzpCO7NfCPTXjqaC+bZgJeR0sMTm6dMHP7U=
-github.com/torquem-ch/mdbx-go v0.22.3-0.20211228021911-87d3d0f58b32 h1:ilu/HpIxvwQMJpf1VGxNfiDsX/TjD9YwGA1VgbTC64I=
-github.com/torquem-ch/mdbx-go v0.22.3-0.20211228021911-87d3d0f58b32/go.mod h1:T2fsoJDVppxfAPTLd1svUgH1kpPmeXdPESmroSHcL1E=
+github.com/torquem-ch/mdbx-go v0.22.3-0.20211228022308-b7b01f7832dc h1:QlaLywuXImJ0dL/tW0V9Nil6ycU3UBvMzj/4R5B9GrQ=
 github.com/torquem-ch/mdbx-go v0.22.3-0.20211228022308-b7b01f7832dc/go.mod h1:T2fsoJDVppxfAPTLd1svUgH1kpPmeXdPESmroSHcL1E=
 github.com/ttacon/chalk v0.0.0-20160626202418-22c06c80ed31/go.mod h1:onvgF043R+lC5RZ8IT9rBXDaEDnpnw/Cl+HFiw+v/7Q=
 github.com/tv42/httpunix v0.0.0-20191220191345-2ba4b9c3382c/go.mod h1:hzIxponao9Kjc7aWznkXaL4U4TWaDSs8zcsY4Ka08nM=
