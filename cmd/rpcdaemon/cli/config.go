@@ -285,8 +285,6 @@ func RemoteServices(ctx context.Context, cfg Flags, logger log.Logger, rootCance
 			if err := allSnapshots.ReopenIndices(); err != nil {
 				return nil, nil, nil, nil, nil, nil, err
 			}
-			a, b, c, _ := allSnapshots.SegmentsAvailability()
-			fmt.Printf("alex5: %d,%d,%d and %d\n", a, b, c, allSnapshots.IndicesAvailable())
 			blockReader = snapshotsync.NewBlockReaderWithSnapshots(allSnapshots)
 		} else {
 			blockReader = snapshotsync.NewBlockReader()
