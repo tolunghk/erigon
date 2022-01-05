@@ -258,6 +258,7 @@ func (back *BlockReaderWithSnapshots) BodyRlp(ctx context.Context, tx kv.Tx, has
 
 func (back *BlockReaderWithSnapshots) BlockWithSenders(ctx context.Context, tx kv.Tx, hash common.Hash, blockHeight uint64) (block *types.Block, senders []common.Address, err error) {
 	sn, ok := back.sn.Blocks(blockHeight)
+	fmt.Printf("alex: %d, %t\n", blockHeight, ok)
 	if !ok {
 		canonicalHash, err := rawdb.ReadCanonicalHash(tx, blockHeight)
 		if err != nil {
@@ -280,6 +281,7 @@ func (back *BlockReaderWithSnapshots) BlockWithSenders(ctx context.Context, tx k
 
 	headerOffset := sn.HeaderHashIdx.Lookup2(blockHeight - sn.HeaderHashIdx.BaseDataID())
 	bodyOffset := sn.BodyNumberIdx.Lookup2(blockHeight - sn.BodyNumberIdx.BaseDataID())
+	fmt.Printf("alex1: %d, %d\n", sn.HeaderHashIdx.BaseDataID(), headerOffset)
 
 	gg := sn.Headers.MakeGetter()
 	gg.Reset(headerOffset)
@@ -327,6 +329,7 @@ func (back *BlockReaderWithSnapshots) BlockWithSenders(ctx context.Context, tx k
 		return block, senders, nil // no senders is fine - will recover them on the fly
 	}
 	block.SendersToTxs(senders)
+	fmt.Printf("alex2\n")
 	return block, senders, nil
 }
 
