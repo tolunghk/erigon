@@ -258,7 +258,6 @@ func (back *BlockReaderWithSnapshots) BodyRlp(ctx context.Context, tx kv.Tx, has
 
 func (back *BlockReaderWithSnapshots) BlockWithSenders(ctx context.Context, tx kv.Tx, hash common.Hash, blockHeight uint64) (block *types.Block, senders []common.Address, err error) {
 	sn, ok := back.sn.Blocks(blockHeight)
-	fmt.Printf("alex: %d, %t, %d\n", blockHeight, ok, back.sn.BlocksAvailable())
 	if !ok {
 		canonicalHash, err := rawdb.ReadCanonicalHash(tx, blockHeight)
 		if err != nil {
