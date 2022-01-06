@@ -35,7 +35,7 @@ type TxLookupEntry struct {
 
 // ReadTxLookupEntry retrieves the positional metadata associated with a transaction
 // hash to allow retrieving the transaction or receipt by hash.
-func ReadTxLookupEntry(db kv.Tx, txnHash common.Hash) (*uint64, error) {
+func ReadTxLookupEntry(db kv.Getter, txnHash common.Hash) (*uint64, error) {
 	data, err := db.GetOne(kv.TxLookup, txnHash.Bytes())
 	if err != nil {
 		return nil, err

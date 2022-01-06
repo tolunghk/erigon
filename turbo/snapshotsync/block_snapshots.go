@@ -54,6 +54,10 @@ const (
 	Transactions SnapshotType = "transactions"
 )
 
+var (
+	Transactions2Block SnapshotType = "transactions-to-block"
+)
+
 var AllSnapshotTypes = []SnapshotType{Headers, Bodies, Transactions}
 
 var (
@@ -292,7 +296,7 @@ func (s *AllSnapshots) Blocks(blockNumber uint64) (snapshot *BlocksSnapshot, fou
 	return snapshot, false
 }
 
-func (s *AllSnapshots) BuildIndices(ctx context.Context, chainID uint256.Int) error {
+func (s *AllSnapshots) BuildIndices(ctx context.Context, chainID uint256.Int, tmpDir string) error {
 	for _, sn := range s.blocks {
 		f := path.Join(s.dir, SegmentFileName(sn.From, sn.To, Headers))
 		if err := HeadersHashIdx(f, sn.From); err != nil {
@@ -332,7 +336,7 @@ func (s *AllSnapshots) BuildIndices(ctx context.Context, chainID uint256.Int) er
 			expectedTxsAmount = lastBody.BaseTxId + uint64(lastBody.TxAmount) - firstBody.BaseTxId
 		}
 		f := path.Join(s.dir, SegmentFileName(sn.From, sn.To, Transactions))
-		if err := TransactionsHashIdx(chainID, firstBody.BaseTxId, f, expectedTxsAmount); err != nil {
+		if err := TransactionsHashIdx(chainID, sn, firstBody.BaseTxId, sn.From, f, expectedTxsAmount, tmpDir); err != nil {
 			return err
 		}
 	}
@@ -713,7 +717,7 @@ func DumpBodies(db kv.RoDB, tmpdir string, fromBlock uint64, blocksAmount int) e
 	return nil
 }
 
-func TransactionsHashIdx(chainID uint256.Int, firstTxID uint64, segmentFileName string, expectedCount uint64) error {
+func TransactionsHashIdx(chainID uint256.Int, sn *BlocksSnapshot, firstTxID, firstBlockNum uint64, segmentFileName string, expectedCount uint64, tmpDir string) error {
 	logEvery := time.NewTicker(20 * time.Second)
 	defer logEvery.Stop()
 	parseCtx := txpool.NewTxParseContext(chainID)
@@ -721,6 +725,7 @@ func TransactionsHashIdx(chainID uint256.Int, firstTxID uint64, segmentFileName 
 	slot := txpool.TxSlot{}
 	var sender [20]byte
 	var j uint64
+
 	d, err := compress.NewDecompressor(segmentFileName)
 	if err != nil {
 		return err
@@ -728,14 +733,51 @@ func TransactionsHashIdx(chainID uint256.Int, firstTxID uint64, segmentFileName 
 	defer d.Close()
 	total := uint64(d.Count())
 
-	if err := Idx(d, firstTxID, func(idx *recsplit.RecSplit, i, offset uint64, word []byte) error {
+	buf := make([]byte, 1024)
+	var body *types.BodyForStorage
+	bodyGetter := sn.Bodies.MakeGetter()
+	bodyGetter.Reset(0)
+	buf, _ = bodyGetter.Next(buf[:0])
+	if err := rlp.DecodeBytes(buf, body); err != nil {
+		return err
+	}
+
+	idx1, err := recsplit.NewRecSplit(recsplit.RecSplitArgs{
+		KeyCount:   d.Count(),
+		Enums:      true,
+		BucketSize: 2000,
+		Salt:       0,
+		LeafSize:   8,
+		TmpDir:     tmpDir,
+		IndexFile:  IdxFileName(sn.From, sn.To, Transactions),
+		BaseDataID: firstTxID,
+	})
+	if err != nil {
+		return err
+	}
+	idx2, err := recsplit.NewRecSplit(recsplit.RecSplitArgs{
+		KeyCount:   d.Count(),
+		Enums:      true,
+		BucketSize: 2000,
+		Salt:       0,
+		LeafSize:   8,
+		TmpDir:     tmpDir,
+		IndexFile:  IdxFileName(sn.From, sn.To, Transactions2Block),
+		BaseDataID: firstTxID,
+	})
+	if err != nil {
+		return err
+	}
+
+RETRY:
+
+	forEach(d, func(i, offset uint64, word []byte) error {
 		if _, err := parseCtx.ParseTransaction(word[1+20:], 0, &slot, sender[:]); err != nil {
 			return err
 		}
-		if err := idx.AddKey(slot.IdHash[:], offset); err != nil {
+		if err := idx1.AddKey(slot.IdHash[:], offset); err != nil {
 			return err
 		}
-
 		select {
 		default:
 		case <-logEvery.C:
@@ -743,9 +785,27 @@ func TransactionsHashIdx(chainID uint256.Int, firstTxID uint64, segmentFileName 
 		}
 		j++
 		return nil
-	}); err != nil {
-		return fmt.Errorf("TransactionsHashIdx: %w", err)
+	})
+
+	if err = idx1.Build(); err != nil {
+		if errors.Is(err, recsplit.ErrCollision) {
+			log.Info("Building recsplit. Collision happened. It's ok. Restarting with another salt...", "err", err)
+			idx1.ResetNextSalt()
+			idx2.ResetNextSalt()
+			goto RETRY
+		}
+		return err
 	}
+	if err = idx2.Build(); err != nil {
+		if errors.Is(err, recsplit.ErrCollision) {
+			log.Info("Building recsplit. Collision happened. It's ok. Restarting with another salt...", "err", err)
+			idx1.ResetNextSalt()
+			idx2.ResetNextSalt()
+			goto RETRY
+		}
+		return err
+	}
+
 	if j != expectedCount {
 		panic(fmt.Errorf("expect: %d, got %d\n", expectedCount, j))
 	}
@@ -812,6 +872,21 @@ func BodiesIdx(segmentFileName string, firstBlockNumInSegment uint64) error {
 		return nil
 	}); err != nil {
 		return fmt.Errorf("BodyNumberIdx: %w", err)
+	}
+	return nil
+}
+
+func forEach(d *compress.Decompressor, walker func(i, offset uint64, word []byte) error) error {
+	g := d.MakeGetter()
+	var wc, pos, nextPos uint64
+	word := make([]byte, 0, 4096)
+	for g.HasNext() {
+		word, nextPos = g.Next(word[:0])
+		if err := walker(wc, pos, word); err != nil {
+			return err
+		}
+		wc++
+		pos = nextPos
 	}
 	return nil
 }
