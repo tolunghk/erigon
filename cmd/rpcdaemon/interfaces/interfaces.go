@@ -21,12 +21,18 @@ type HeaderReader interface {
 }
 
 type BodyReader interface {
-	Body(ctx context.Context, tx kv.Tx, hash common.Hash, blockHeight uint64) (body *types.Body, err error)
+	BodyWithTransaction(ctx context.Context, tx kv.Tx, hash common.Hash, blockHeight uint64) (body *types.Body, err error)
 	BodyRlp(ctx context.Context, tx kv.Tx, hash common.Hash, blockHeight uint64) (bodyRlp rlp.RawValue, err error)
+	Body(ctx context.Context, tx kv.Tx, hash common.Hash, blockHeight uint64) (body *types.Body, err error)
+}
+
+type TxnReader interface {
+	TxnLookup(ctx context.Context, tx kv.Getter, txnHash common.Hash) (uint64, bool, error)
 }
 
 type FullBlockReader interface {
 	BlockReader
 	BodyReader
 	HeaderReader
+	TxnReader
 }

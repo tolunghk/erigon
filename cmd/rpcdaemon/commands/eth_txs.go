@@ -26,14 +26,15 @@ func (api *APIImpl) GetTransactionByHash(ctx context.Context, hash common.Hash) 
 	defer tx.Rollback()
 
 	// https://infura.io/docs/ethereum/json-rpc/eth-getTransactionByHash
-	blockNum, err := rawdb.ReadTxLookupEntry(tx, hash)
+	blockNum, ok, err := api._blockReader.TxnLookup(ctx, tx, hash)
+	//blockNum, err := rawdb.ReadTxLookupEntry(tx, hash)
 	if err != nil {
 		return nil, err
 	}
-	if blockNum == nil {
+	if !ok {
 		return nil, nil
 	}
-	txn, blockHash, blockNumber, txIndex, err := rawdb.ReadTransaction(tx, hash, *blockNum)
+	txn, blockHash, blockNumber, txIndex, err := rawdb.ReadTransaction(tx, hash, blockNum)
 	if err != nil {
 		return nil, err
 	}
