@@ -936,7 +936,6 @@ func Idx(d *compress.Decompressor, firstDataID uint64, tmpDir string, walker fun
 	segmentFileName := d.FilePath()
 	var extension = filepath.Ext(segmentFileName)
 	var idxFilePath = segmentFileName[0:len(segmentFileName)-len(extension)] + ".idx"
-
 	rs, err := recsplit.NewRecSplit(recsplit.RecSplitArgs{
 		KeyCount:   d.Count(),
 		Enums:      true,
@@ -971,7 +970,6 @@ RETRY:
 			rs.ResetNextSalt()
 			goto RETRY
 		}
-		panic(err)
 		return err
 	}
 
