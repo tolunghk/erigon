@@ -971,6 +971,7 @@ RETRY:
 			rs.ResetNextSalt()
 			goto RETRY
 		}
+		panic(err)
 		return err
 	}
 
