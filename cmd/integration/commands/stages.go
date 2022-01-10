@@ -3,6 +3,7 @@ package commands
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"path"
 	"sort"
@@ -42,6 +43,35 @@ import (
 	"github.com/spf13/cobra"
 )
 
+var genGc = &cobra.Command{
+	Use: "gen_gc",
+	RunE: func(cmd *cobra.Command, args []string) error {
+		ctx, _ := utils.RootContext()
+		logger := log.New()
+		db := openDB(chaindata, logger, true)
+		defer db.Close()
+
+		v := make([]byte, 100*1024*1024)
+		k := make([]byte, 8)
+		return db.Update(ctx, func(tx kv.RwTx) error {
+			for i := uint64(0); i < 1000; i++ { // 100Gb
+				binary.BigEndian.PutUint64(k, i)
+				err := tx.Put(kv.DatabaseInfo, k, v)
+				if err != nil {
+					return err
+				}
+			}
+			for i := uint64(0); i < 100; i++ {
+				binary.BigEndian.PutUint64(k, i)
+				err := tx.Delete(kv.DatabaseInfo, k, nil)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	},
+}
 var cmdStageHeaders = &cobra.Command{
 	Use:   "stage_headers",
 	Short: "",
