@@ -55,13 +55,9 @@ var genGc = &cobra.Command{
 		v := make([]byte, 10*1024*1024) // 100Mb
 		k := make([]byte, 8)
 		for j := uint64(0); j < 10_000; j++ {
+			log.Info("put", "j", j)
 			if err := db.Update(ctx, func(tx kv.RwTx) error {
 				for i := uint64(j * 20); i < (j+1)*20; i++ {
-					if i%100 == 0 {
-						var m runtime.MemStats
-						runtime.ReadMemStats(&m)
-						log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
-					}
 					binary.BigEndian.PutUint64(k, i)
 					err := tx.Put(kv.DatabaseInfo, k, v)
 					if err != nil {
@@ -74,13 +70,9 @@ var genGc = &cobra.Command{
 			}
 		}
 		for j := uint64(0); j < 10_000; j++ {
+			log.Info("put", "j", j)
 			if err := db.Update(ctx, func(tx kv.RwTx) error {
 				for i := uint64(j * 20); i < (j+1)*20; i++ {
-					if i%100 == 0 {
-						var m runtime.MemStats
-						runtime.ReadMemStats(&m)
-						log.Info("del", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
-					}
 					binary.BigEndian.PutUint64(k, i)
 					err := tx.Delete(kv.DatabaseInfo, k, nil)
 					if err != nil {
