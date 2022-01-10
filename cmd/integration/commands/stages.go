@@ -54,34 +54,44 @@ var genGc = &cobra.Command{
 
 		v := make([]byte, 100*1024*1024)
 		k := make([]byte, 8)
-		return db.Update(ctx, func(tx kv.RwTx) error {
-			for i := uint64(0); i < 2000; i++ { // 200Gb
-				if i%100 == 0 {
-					var m runtime.MemStats
-					runtime.ReadMemStats(&m)
-					log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
+		for j := uint64(0); j < 10; j++ {
+			if err := db.Update(ctx, func(tx kv.RwTx) error {
+				for i := uint64(j * 200); i < (j+1)*200; i++ { // 200Gb
+					if i%100 == 0 {
+						var m runtime.MemStats
+						runtime.ReadMemStats(&m)
+						log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
+					}
+					binary.BigEndian.PutUint64(k, i)
+					err := tx.Put(kv.DatabaseInfo, k, v)
+					if err != nil {
+						return err
+					}
 				}
-				binary.BigEndian.PutUint64(k, i)
-				err := tx.Put(kv.DatabaseInfo, k, v)
-				if err != nil {
-					return err
-				}
+				return nil
+			}); err != nil {
+				return err
 			}
-			for i := uint64(0); i < 2000; i++ {
-				if i%100 == 0 {
-					var m runtime.MemStats
-					runtime.ReadMemStats(&m)
-					log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
-					fmt.Printf("del: %d\n", i)
+			if err := db.Update(ctx, func(tx kv.RwTx) error {
+				for i := uint64(j * 200); i < (j+1)*200; i++ {
+					if i%100 == 0 {
+						var m runtime.MemStats
+						runtime.ReadMemStats(&m)
+						log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
+						fmt.Printf("del: %d\n", i)
+					}
+					binary.BigEndian.PutUint64(k, i)
+					err := tx.Delete(kv.DatabaseInfo, k, nil)
+					if err != nil {
+						return err
+					}
 				}
-				binary.BigEndian.PutUint64(k, i)
-				err := tx.Delete(kv.DatabaseInfo, k, nil)
-				if err != nil {
-					return err
-				}
+				return nil
+			}); err != nil {
+				return err
 			}
-			return nil
-		})
+		}
+		return nil
 	},
 }
 var cmdStageHeaders = &cobra.Command{
