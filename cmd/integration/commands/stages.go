@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"path"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -56,7 +57,9 @@ var genGc = &cobra.Command{
 		return db.Update(ctx, func(tx kv.RwTx) error {
 			for i := uint64(0); i < 2000; i++ { // 200Gb
 				if i%100 == 0 {
-					fmt.Printf("put: %d\n", i)
+					var m runtime.MemStats
+					runtime.ReadMemStats(&m)
+					log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
 				}
 				binary.BigEndian.PutUint64(k, i)
 				err := tx.Put(kv.DatabaseInfo, k, v)
@@ -66,6 +69,9 @@ var genGc = &cobra.Command{
 			}
 			for i := uint64(0); i < 2000; i++ {
 				if i%100 == 0 {
+					var m runtime.MemStats
+					runtime.ReadMemStats(&m)
+					log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
 					fmt.Printf("del: %d\n", i)
 				}
 				binary.BigEndian.PutUint64(k, i)
