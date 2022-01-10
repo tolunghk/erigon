@@ -54,14 +54,14 @@ var genGc = &cobra.Command{
 		v := make([]byte, 100*1024*1024)
 		k := make([]byte, 8)
 		return db.Update(ctx, func(tx kv.RwTx) error {
-			for i := uint64(0); i < 1000; i++ { // 100Gb
+			for i := uint64(0); i < 2000; i++ { // 200Gb
 				binary.BigEndian.PutUint64(k, i)
 				err := tx.Put(kv.DatabaseInfo, k, v)
 				if err != nil {
 					return err
 				}
 			}
-			for i := uint64(0); i < 100; i++ {
+			for i := uint64(0); i < 2000; i++ {
 				binary.BigEndian.PutUint64(k, i)
 				err := tx.Delete(kv.DatabaseInfo, k, nil)
 				if err != nil {
