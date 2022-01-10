@@ -52,10 +52,10 @@ var genGc = &cobra.Command{
 		db := openDB(chaindata, logger, true)
 		defer db.Close()
 
-		v := make([]byte, 100*1024*1024) // 100Mb
+		v := make([]byte, 10*1024*1024) // 100Mb
 		k := make([]byte, 8)
 
-		for j := uint64(0); j < 100; j++ {
+		for j := uint64(0); j < 1000; j++ {
 			if err := db.Update(ctx, func(tx kv.RwTx) error {
 				for i := uint64(0); i < 10_000; i++ { // 200Gb
 					if i%100 == 0 {
@@ -74,7 +74,7 @@ var genGc = &cobra.Command{
 				return err
 			}
 		}
-		for j := uint64(0); j < 100; j++ {
+		for j := uint64(0); j < 1000; j++ {
 			if err := db.Update(ctx, func(tx kv.RwTx) error {
 				for i := uint64(j * 200); i < (j+1)*200; i++ {
 					if i%100 == 0 {
