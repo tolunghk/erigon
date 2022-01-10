@@ -318,6 +318,10 @@ func init() {
 	withChain(cmdPrintStages)
 	rootCmd.AddCommand(cmdPrintStages)
 
+	withDatadir(genGc)
+	withChain(genGc)
+	rootCmd.AddCommand(genGc)
+
 	withIntegrityChecks(cmdStageSenders)
 	withReset(cmdStageSenders)
 	withBlock(cmdStageSenders)
