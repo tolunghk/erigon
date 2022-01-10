@@ -53,9 +53,6 @@ var genGc = &cobra.Command{
 		db := openDB(chaindata, logger, true)
 		defer db.Close()
 
-		v := make([]byte, 10*1024*1024) // 100Mb
-		k := make([]byte, 8)
-
 		for j := uint64(0); j < 1000; j++ {
 			if err := db.Update(ctx, func(tx kv.RwTx) error {
 				for i := uint64(0); i < 10_000; i++ { // 200Gb
@@ -64,6 +61,8 @@ var genGc = &cobra.Command{
 						runtime.ReadMemStats(&m)
 						log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
 					}
+					v := make([]byte, 10*1024*1024) // 100Mb
+					k := make([]byte, 8)
 					binary.BigEndian.PutUint64(k, i)
 					err := tx.Put(kv.DatabaseInfo, k, v)
 					if err != nil {
@@ -84,6 +83,7 @@ var genGc = &cobra.Command{
 						runtime.ReadMemStats(&m)
 						log.Info("del", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
 					}
+					k := make([]byte, 8)
 					binary.BigEndian.PutUint64(k, i)
 					err := tx.Delete(kv.DatabaseInfo, k, nil)
 					if err != nil {
