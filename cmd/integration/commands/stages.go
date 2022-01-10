@@ -55,6 +55,9 @@ var genGc = &cobra.Command{
 		k := make([]byte, 8)
 		return db.Update(ctx, func(tx kv.RwTx) error {
 			for i := uint64(0); i < 2000; i++ { // 200Gb
+				if i%100 == 0 {
+					fmt.Printf("put: %d\n", i)
+				}
 				binary.BigEndian.PutUint64(k, i)
 				err := tx.Put(kv.DatabaseInfo, k, v)
 				if err != nil {
@@ -62,6 +65,9 @@ var genGc = &cobra.Command{
 				}
 			}
 			for i := uint64(0); i < 2000; i++ {
+				if i%100 == 0 {
+					fmt.Printf("del: %d\n", i)
+				}
 				binary.BigEndian.PutUint64(k, i)
 				err := tx.Delete(kv.DatabaseInfo, k, nil)
 				if err != nil {
