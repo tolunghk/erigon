@@ -6,7 +6,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"path"
-	"runtime"
 	"sort"
 	"strings"
 	"sync"
