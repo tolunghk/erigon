@@ -53,9 +53,9 @@ var genGc = &cobra.Command{
 		db := openDB(chaindata, logger, true)
 		defer db.Close()
 
-		for j := uint64(0); j < 1000; j++ {
+		for j := uint64(0); j < 10_000; j++ {
 			if err := db.Update(ctx, func(tx kv.RwTx) error {
-				for i := uint64(0); i < 10_000; i++ { // 200Gb
+				for i := uint64(j * 20); i < (j+1)*20; i++ {
 					if i%100 == 0 {
 						var m runtime.MemStats
 						runtime.ReadMemStats(&m)
@@ -75,9 +75,9 @@ var genGc = &cobra.Command{
 			}
 			time.Sleep(100 * time.Millisecond)
 		}
-		for j := uint64(0); j < 1000; j++ {
+		for j := uint64(0); j < 10_000; j++ {
 			if err := db.Update(ctx, func(tx kv.RwTx) error {
-				for i := uint64(j * 200); i < (j+1)*200; i++ {
+				for i := uint64(j * 20); i < (j+1)*20; i++ {
 					if i%100 == 0 {
 						var m runtime.MemStats
 						runtime.ReadMemStats(&m)
