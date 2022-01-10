@@ -10,6 +10,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/c2h5oh/datasize"
 	common2 "github.com/ledgerwatch/erigon-lib/common"
@@ -73,6 +74,7 @@ var genGc = &cobra.Command{
 			}); err != nil {
 				return err
 			}
+			time.Sleep(100 * time.Millisecond)
 		}
 		for j := uint64(0); j < 1000; j++ {
 			if err := db.Update(ctx, func(tx kv.RwTx) error {
@@ -92,6 +94,7 @@ var genGc = &cobra.Command{
 			}); err != nil {
 				return err
 			}
+			time.Sleep(100 * time.Millisecond)
 		}
 
 		return nil
