@@ -319,7 +319,6 @@ func init() {
 	rootCmd.AddCommand(cmdPrintStages)
 
 	withDatadir(genGc)
-	withChain(genGc)
 	rootCmd.AddCommand(genGc)
 
 	withIntegrityChecks(cmdStageSenders)
