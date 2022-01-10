@@ -80,8 +80,7 @@ var genGc = &cobra.Command{
 					if i%100 == 0 {
 						var m runtime.MemStats
 						runtime.ReadMemStats(&m)
-						log.Info("put", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
-						fmt.Printf("del: %d\n", i)
+						log.Info("del", "i", i, "alloc", common2.ByteCount(m.Alloc), "sys", common2.ByteCount(m.Sys))
 					}
 					binary.BigEndian.PutUint64(k, i)
 					err := tx.Delete(kv.DatabaseInfo, k, nil)
