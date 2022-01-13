@@ -196,7 +196,7 @@ func snapshotBlocks(ctx context.Context, chainDB kv.RoDB, fromBlock, toBlock, bl
 		if err := snapshotsync.DumpBodies(ctx, chainDB, srcFilePath, i, int(blocksPerFile)); err != nil {
 			panic(err)
 		}
-		if err := compress.Compress(ctx, "Bodies", srcFilePath, segmentFile, tmpDir); err != nil {
+		if err := compress.ParallelCompress(ctx, "Bodies", srcFilePath, segmentFile, tmpDir, workers); err != nil {
 			return err
 		}
 		_ = os.Remove(srcFilePath)
@@ -208,7 +208,7 @@ func snapshotBlocks(ctx context.Context, chainDB kv.RoDB, fromBlock, toBlock, bl
 		if err := snapshotsync.DumpHeaders(ctx, chainDB, srcFilePath, i, int(blocksPerFile)); err != nil {
 			panic(err)
 		}
-		if err := compress.Compress(ctx, "Headers", srcFilePath, segmentFile, tmpDir); err != nil {
+		if err := compress.ParallelCompress(ctx, "Headers", srcFilePath, segmentFile, tmpDir, workers); err != nil {
 			return err
 		}
 		_ = os.Remove(srcFilePath)
@@ -220,7 +220,7 @@ func snapshotBlocks(ctx context.Context, chainDB kv.RoDB, fromBlock, toBlock, bl
 		if _, err := snapshotsync.DumpTxs(ctx, chainDB, srcFilePath, i, int(blocksPerFile)); err != nil {
 			panic(err)
 		}
-		if err := compress.Compress(ctx, "Transactions", srcFilePath, segmentFile, tmpDir); err != nil {
+		if err := compress.ParallelCompress(ctx, "Transactions", srcFilePath, segmentFile, tmpDir, workers); err != nil {
 			return err
 		}
 		_ = os.Remove(srcFilePath)
