@@ -220,7 +220,7 @@ func snapshotBlocks(ctx context.Context, chainDB kv.RoDB, fromBlock, toBlock, bl
 		if _, err := snapshotsync.DumpTxs(ctx, chainDB, tmpFilePath, i, int(blocksPerFile)); err != nil {
 			panic(err)
 		}
-		if err := compress.ParallelCompress(ctx, "Transactions", tmpFilePath, segmentFile, 2); err != nil {
+		if err := compress.Compress(ctx, "Transactions", tmpFilePath, segmentFile, tmpDir); err != nil {
 			return err
 		}
 		_ = os.Remove(tmpFilePath)
