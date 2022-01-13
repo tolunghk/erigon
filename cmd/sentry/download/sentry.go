@@ -852,6 +852,7 @@ func (ss *SentryServerImpl) SetStatus(_ context.Context, statusData *proto_sentr
 
 func (ss *SentryServerImpl) SimplePeerCount() (pc int) {
 	ss.rangePeers(func(peerID string, peerInfo *PeerInfo) bool {
+		fmt.Printf("alex: %s\n", peerInfo.peer.Name())
 		pc++
 		return true
 	})
