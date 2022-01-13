@@ -189,41 +189,41 @@ func snapshotBlocks(ctx context.Context, chainDB kv.RoDB, fromBlock, toBlock, bl
 
 	for i := fromBlock; i < last; i += blocksPerFile {
 		fileName := snapshotsync.FileName(i, i+blocksPerFile, snapshotsync.Bodies)
-		tmpFilePath := path.Join(tmpDir, fileName) + ".dat"
+		srcFilePath := path.Join(tmpDir, fileName) + ".dat"
 		segmentFile := path.Join(snapshotDir, fileName) + ".seg"
 		log.Info("Creating", "file", fileName)
 
-		if err := snapshotsync.DumpBodies(ctx, chainDB, tmpFilePath, i, int(blocksPerFile)); err != nil {
+		if err := snapshotsync.DumpBodies(ctx, chainDB, srcFilePath, i, int(blocksPerFile)); err != nil {
 			panic(err)
 		}
-		if err := compress.Compress(ctx, "Bodies", tmpFilePath, segmentFile, tmpDir); err != nil {
+		if err := compress.Compress(ctx, "Bodies", srcFilePath, segmentFile, tmpDir); err != nil {
 			return err
 		}
-		_ = os.Remove(tmpFilePath)
+		_ = os.Remove(srcFilePath)
 
 		fileName = snapshotsync.FileName(i, i+blocksPerFile, snapshotsync.Headers)
-		tmpFilePath = path.Join(tmpDir, fileName) + ".dat"
+		srcFilePath = path.Join(tmpDir, fileName) + ".dat"
 		segmentFile = path.Join(snapshotDir, fileName) + ".seg"
 		log.Info("Creating", "file", fileName)
-		if err := snapshotsync.DumpHeaders(ctx, chainDB, tmpFilePath, i, int(blocksPerFile)); err != nil {
+		if err := snapshotsync.DumpHeaders(ctx, chainDB, srcFilePath, i, int(blocksPerFile)); err != nil {
 			panic(err)
 		}
-		if err := compress.Compress(ctx, "Headers", tmpFilePath, segmentFile, tmpDir); err != nil {
+		if err := compress.Compress(ctx, "Headers", srcFilePath, segmentFile, tmpDir); err != nil {
 			return err
 		}
-		_ = os.Remove(tmpFilePath)
+		_ = os.Remove(srcFilePath)
 
 		fileName = snapshotsync.FileName(i, i+blocksPerFile, snapshotsync.Transactions)
-		tmpFilePath = path.Join(tmpDir, fileName) + ".dat"
+		srcFilePath = path.Join(tmpDir, fileName) + ".dat"
 		segmentFile = path.Join(snapshotDir, fileName) + ".seg"
 		log.Info("Creating", "file", fileName)
-		if _, err := snapshotsync.DumpTxs(ctx, chainDB, tmpFilePath, i, int(blocksPerFile)); err != nil {
+		if _, err := snapshotsync.DumpTxs(ctx, chainDB, srcFilePath, i, int(blocksPerFile)); err != nil {
 			panic(err)
 		}
-		if err := compress.Compress(ctx, "Transactions", tmpFilePath, segmentFile, tmpDir); err != nil {
+		if err := compress.Compress(ctx, "Transactions", srcFilePath, segmentFile, tmpDir); err != nil {
 			return err
 		}
-		_ = os.Remove(tmpFilePath)
+		_ = os.Remove(srcFilePath)
 
 		//nolint
 		//break // TODO: remove me - useful for tests
