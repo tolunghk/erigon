@@ -615,12 +615,15 @@ func (ss *SentryServerImpl) removePeer(peerID string) {
 }
 
 func (ss *SentryServerImpl) writePeer(peerID string, peerInfo *PeerInfo, msgcode uint64, data []byte) error {
-	err := peerInfo.rw.WriteMsg(p2p.Msg{Code: msgcode, Size: uint32(len(data)), Payload: bytes.NewReader(data)})
-	if err != nil {
-		peerInfo.Remove()
-		ss.GoodPeers.Delete(peerID)
-	}
-	return err
+	go func() {
+		err := peerInfo.rw.WriteMsg(p2p.Msg{Code: msgcode, Size: uint32(len(data)), Payload: bytes.NewReader(data)})
+		if err != nil {
+			peerInfo.Remove()
+			ss.GoodPeers.Delete(peerID)
+		}
+		//return err
+	}()
+	return nil
 }
 
 func (ss *SentryServerImpl) startSync(ctx context.Context, bestHash common.Hash, peerID string) error {
