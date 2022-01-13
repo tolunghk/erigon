@@ -1418,7 +1418,7 @@ func genstate() error {
 }
 
 func compress1(fileName, segmentFileName string) error {
-	return compress.Compress(context.Background(), "hack", fileName, segmentFileName, runtime.GOMAXPROCS(-1))
+	return compress.ParallelCompress(context.Background(), "hack", fileName, segmentFileName, runtime.GOMAXPROCS(-1))
 }
 func decompress(name string) error {
 	return parallelcompress.Decompress("hack", name)
