@@ -39,7 +39,7 @@ require (
 	github.com/json-iterator/go v1.1.12
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/kevinburke/go-bindata v3.21.0+incompatible
-	github.com/ledgerwatch/erigon-lib v0.0.0-20220113130538-b0e5fceb52d0
+	github.com/ledgerwatch/erigon-lib v0.0.0-20220113132619-bed17ef07f4f
 	github.com/ledgerwatch/log/v3 v3.4.0
 	github.com/ledgerwatch/secp256k1 v1.0.0
 	github.com/logrusorgru/aurora/v3 v3.0.0
@@ -56,7 +56,7 @@ require (
 	github.com/tendermint/go-amino v0.14.1
 	github.com/tendermint/iavl v0.12.0
 	github.com/tendermint/tendermint v0.31.11
-	github.com/torquem-ch/mdbx-go v0.22.4-0.20220113130431-38a5f1a33b80
+	github.com/torquem-ch/mdbx-go v0.22.4-0.20220113132515-b3bb154e4b7c
 	github.com/ugorji/go/codec v1.1.13
 	github.com/ugorji/go/codec/codecgen v1.1.13
 	github.com/urfave/cli v1.22.5
