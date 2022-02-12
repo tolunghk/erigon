@@ -71,7 +71,40 @@ func (api *APIImpl) NewHeads(ctx context.Context) (*rpc.Subscription, error) {
 
 	return rpcSub, nil
 }
-
+type RPCTransactionMod struct {
+	From     common.Address    `json:"from"`
+	GasPrice *hexutil.Big      `json:"gasPrice"`
+	Hash     common.Hash       `json:"hash"`
+	Input    hexutil.Bytes     `json:"input"`
+	To       *common.Address   `json:"to"`
+	Value    *hexutil.Big      `json:"value"`
+}
+func newRPCTransactionMod(tx *types.Transaction) *RPCTransactionMod {
+	/*
+	var signer types.Signer
+	if tx.Protected() {
+		signer = types.LatestSignerForChainID(tx.ChainId())
+	} else {
+		signer = types.HomesteadSigner{}
+	}
+	from, _ := types.Sender(signer, tx)
+	*/
+	var chainId *big.Int
+	//chainId = types.DeriveChainId(&t.V).ToBig()
+	chainId = tx.GetChainID().ToBig()
+	result := &RPCTransactionMod{
+//		Gas:   hexutil.Uint64(tx.GetGas()),
+		GasPrice: (*hexutil.Big)(t.GasPrice.ToBig()),
+		Hash:  tx.Hash(),
+		Input: hexutil.Bytes(tx.GetData()),
+	//	Nonce: hexutil.Uint64(tx.GetNonce()),
+		To:    tx.GetTo(),
+		Value: (*hexutil.Big)(tx.GetValue().ToBig()),
+	}
+	signer := types.LatestSignerForChainID(chainId)
+	result.From, _ = tx.Sender(*signer)
+	return result
+}
 // NewPendingTransactions send a notification each time a new (header) block is appended to the chain.
 func (api *APIImpl) NewPendingTransactions(ctx context.Context) (*rpc.Subscription, error) {
 	if api.filters == nil {
@@ -96,7 +129,8 @@ func (api *APIImpl) NewPendingTransactions(ctx context.Context) (*rpc.Subscripti
 			case txs := <-txsCh:
 				for _, t := range txs {
 					if t != nil {
-						err := notifier.Notify(rpcSub.ID, t.Hash())
+						//err := notifier.Notify(rpcSub.ID, t.Hash())
+						err := notifier.Notify(rpcSub.ID, newRPCTransactionMod(t))
 						if err != nil {
 							log.Warn("error while notifying subscription", "err", err)
 						}
