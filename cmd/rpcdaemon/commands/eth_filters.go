@@ -81,7 +81,7 @@ type RPCTransactionMod struct {
 	To       *common.Address   `json:"to"`
 	Value    *hexutil.Big      `json:"value"`
 }
-func newRPCTransactionMod(tx *types.Transaction) *RPCTransactionMod {
+func newRPCTransactionMod(tx types.Transaction) *RPCTransactionMod {
 	/*
 	var signer types.Signer
 	if tx.Protected() {
