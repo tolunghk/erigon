@@ -96,7 +96,7 @@ func newRPCTransactionMod(tx types.Transaction) *RPCTransactionMod {
 	chainId = tx.GetChainID().ToBig()
 	result := &RPCTransactionMod{
 //		Gas:   hexutil.Uint64(tx.GetGas()),
-		GasPrice: (*hexutil.Big)(t.GasPrice.ToBig()),
+		GasPrice: (*hexutil.Big)(tx.GasPrice.ToBig()),
 		Hash:  tx.Hash(),
 		Input: hexutil.Bytes(tx.GetData()),
 	//	Nonce: hexutil.Uint64(tx.GetNonce()),
