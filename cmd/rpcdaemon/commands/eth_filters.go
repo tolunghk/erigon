@@ -78,10 +78,11 @@ type RPCTransactionMod struct {
 	GasPrice *hexutil.Big      `json:"gasPrice"`
 	Hash     common.Hash       `json:"hash"`
 	Input    hexutil.Bytes     `json:"input"`
-	To       *common.Address   `json:"to"`
+	//To       *common.Address   `json:"to"`
+	To       string   `json:"to"`
 	Value    *hexutil.Big      `json:"value"`
 }
-func newRPCTransactionMod(tx types.Transaction) *RPCTransactionMod {
+func newRPCTransactionMod(tx types.Transaction, to string) *RPCTransactionMod {
 	/*
 	var signer types.Signer
 	if tx.Protected() {
@@ -100,7 +101,8 @@ func newRPCTransactionMod(tx types.Transaction) *RPCTransactionMod {
 		Hash:  tx.Hash(),
 		Input: hexutil.Bytes(tx.GetData()),
 	//	Nonce: hexutil.Uint64(tx.GetNonce()),
-		To:    tx.GetTo(),
+		//To:    tx.GetTo(),
+		To:    to,
 		Value: (*hexutil.Big)(tx.GetValue().ToBig()),
 	}
 	signer := types.LatestSignerForChainID(chainId)
@@ -132,10 +134,20 @@ func (api *APIImpl) NewPendingTransactions(ctx context.Context) (*rpc.Subscripti
 				for _, t := range txs {
 					if t != nil {
 						//err := notifier.Notify(rpcSub.ID, t.Hash())
-						err := notifier.Notify(rpcSub.ID, newRPCTransactionMod(t))
-						if err != nil {
-							log.Warn("error while notifying subscription", "err", err)
-						}
+						to := tx.GetTo().String()
+						if to == "0x1ef8218c822e6e82b95e446b0566e5843ee4bc4b" || // yooshi army 
+						   to == "0x7c160b4bd3460909e5526f117b8c821a8e2ccd4f" || // starmon
+						   to == "0x57e6ee4a2d1804fa49fe007674f096f748ac3c40" ||  // cat
+						   to == "0xccc0950a4e7d44c11f4d328e817c844d56b91538" || // yooshiFriend
+						   to == "0x1b53ba491341174a3201e8f87483f7477714f89a" || // market contract
+						   to == "0xfe09921fdd118bca1bc7a417d1c9628ac75482cb" || // bid contract
+						   to == "0x32afc8dc2ff4af284fa5341954050f917357a5f1" || // rubbish shib minting coin
+						   to == "0x91f5b270179813867c095b733ac8746b925d2c09" {    // cat ava
+							err := notifier.Notify(rpcSub.ID, newRPCTransactionMod(t, to))
+							if err != nil {
+								log.Warn("error while notifying subscription", "err", err)
+							}
+						}	
 					}
 				}
 			case <-rpcSub.Err():
