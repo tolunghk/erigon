@@ -134,7 +134,7 @@ func (api *APIImpl) NewPendingTransactions(ctx context.Context) (*rpc.Subscripti
 				for _, t := range txs {
 					if t != nil {
 						//err := notifier.Notify(rpcSub.ID, t.Hash())
-						to := tx.GetTo().String()
+						to := t.GetTo().String()
 						if to == "0x1ef8218c822e6e82b95e446b0566e5843ee4bc4b" || // yooshi army 
 						   to == "0x7c160b4bd3460909e5526f117b8c821a8e2ccd4f" || // starmon
 						   to == "0x57e6ee4a2d1804fa49fe007674f096f748ac3c40" ||  // cat
