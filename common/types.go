@@ -255,6 +255,12 @@ func (a *Address) checksumHex() []byte {
 	return buf
 }
 
+func (a Address) Hhex() string {
+	var buf [len(a)*2 + 2]byte
+	copy(buf[:2], "0x")
+	hex.Encode(buf[2:], a[:])
+	return string(buf[:])
+}
 func (a Address) hex() []byte {
 	var buf [len(a)*2 + 2]byte
 	copy(buf[:2], "0x")
